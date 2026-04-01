@@ -1,150 +1,117 @@
-import asyncio
-import uuid
-import os
-import threading
-import time
-from flask import Flask, request, jsonify, send_from_directory
-from instagrapi import Client
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUJAL | SX⁷ - ADVANCED CONTROL</title>
+    <style>
+        body { background:#0a0e14; color:#00ff88; font-family:'Courier New', monospace; margin:0; padding:0; }
+        .header { text-align:center; padding:20px; background:#161b22; font-size:28px; border-bottom:3px solid #00ff88; }
+        .tabs { display:flex; background:#161b22; }
+        .tab { padding:15px 20px; cursor:pointer; flex:1; text-align:center; }
+        .tab.active { background:#0f1419; border-bottom:3px solid #00ff88; }
+        .content { padding:20px; display:none; }
+        .content.active { display:block; }
+        .panel { background:#161b22; border:1px solid #00ff88; padding:15px; margin:10px 0; border-radius:6px; }
+        input, textarea { width:100%; padding:10px; margin:8px 0; background:#0a0e14; color:#00ff88; border:1px solid #00ff88; }
+        button { width:100%; padding:12px; margin:8px 0; background:#00ff88; color:black; font-weight:bold; border:none; cursor:pointer; }
+        button:hover { background:#00cc6a; }
+        .logs { height:48vh; overflow-y:auto; background:#0a0e14; padding:12px; border:1px solid #00ff88; white-space:pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="header">✦ SUJAL | SX⁷ - ADVANCED SINGLE ACCOUNT ✦</div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">Dashboard</div>
+        <div class="tab" onclick="switchTab(1)">Messages</div>
+        <div class="tab" onclick="switchTab(2)">Name Change</div>
+        <div class="tab" onclick="switchTab(3)">Session Login</div>
+    </div>
 
-app = Flask(__name__)
+    <!-- Dashboard -->
+    <div class="content active" id="tab0">
+        <div class="panel">
+            <h2>🚀 STATUS</h2>
+            <div id="status" style="padding:12px; background:#1a2a1f; font-size:18px;">Stopped</div>
+            <button onclick="startBot()">▶ START BOT</button>
+            <button onclick="stopBot()">⛔ STOP BOT</button>
+        </div>
+        <div class="panel">
+            <h2>📜 LIVE LOGS</h2>
+            <div class="logs" id="liveLogs"></div>
+        </div>
+    </div>
 
-# ===================== GLOBAL =====================
-client = None
-is_running = False
-logs = []
-round_number = 1
+    <!-- Messages -->
+    <div class="content" id="tab1">
+        <div class="panel">
+            <h2>📨 Messages (Comma Separated)</h2>
+            <textarea id="messages" rows="10" placeholder="Messages comma se alag karke daalo..."></textarea>
+        </div>
+    </div>
 
-CURRENT_MESSAGES = []
-CURRENT_NC_TITLES = []
-MSG_DELAY = 25
-NC_DELAY = 8
-TARGET_THREAD_ID = None
-
-def log(msg):
-    ts = time.strftime("%H:%M:%S")
-    line = f"[{ts}] {msg}"
-    logs.append(line)
-    if len(logs) > 500:
-        logs.pop(0)
-    print(line)
-
-def get_random_fingerprint():
-    agents = [
-        "Instagram 312.0.0.22.114 Android",
-        "Instagram 311.0.0.21.111 Android",
-        "Instagram 310.0.0.20.108 Android"
-    ]
-    return agents[round_number % len(agents)]
-
-def setup_fingerprint(cl):
-    cl.set_user_agent(get_random_fingerprint())
-    uuids = {
-        "phone_id": str(uuid.uuid4()),
-        "uuid": str(uuid.uuid4()),
-        "client_session_id": str(uuid.uuid4()),
-        "advertising_id": str(uuid.uuid4()),
-        "device_id": "android-" + uuid.uuid4().hex[:16]
-    }
-    cl.set_uuids(uuids)
-
-@app.route('/')
-def index():
-    return send_from_directory('.', 'index.html')
-
-@app.route('/logs')
-def get_logs():
-    return "<br>".join(logs[-60:])
-
-@app.route('/start', methods=['POST'])
-def start_bot():
-    global client, is_running, CURRENT_MESSAGES, CURRENT_NC_TITLES, MSG_DELAY, NC_DELAY, TARGET_THREAD_ID
-
-    data = request.json
-    sessionid = data.get('sessionid', '').strip()
-
-    cl = Client()
-    setup_fingerprint(cl)
-
-    try:
-        if sessionid:
-            cl.login_by_sessionid(sessionid)
-            log("✅ Login Successful using Session ID")
+    <!-- Name Change + Delays -->
+    <div class="content" id="tab2">
+        <div class="panel">
+            <h2>💠 Name Change Titles (One Per Line)</h2>
+            <textarea id="nc_titles" rows="8"></textarea>
             
-            ds_user_id = data.get('ds_user_id', '').strip()
-            if ds_user_id:
-                cl.set_user_id(ds_user_id)
-        else:
-            return jsonify({"error": "Session ID daalna zaroori hai"}), 400
+            <h3>⏱️ Delay Settings</h3>
+            <input type="number" id="msg_delay" value="25" placeholder="Message Delay (seconds)">
+            <input type="number" id="nc_delay" value="8" placeholder="Name Change Delay (seconds)">
+        </div>
+    </div>
 
-        client = cl
+    <!-- Session Login + Specific Group -->
+    <div class="content" id="tab3">
+        <div class="panel">
+            <h2>🔑 Session Login (Session ID se)</h2>
+            
+            <input type="text" id="sessionid" placeholder="sessionid = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+            <input type="text" id="ds_user_id" placeholder="ds_user_id = 1234567890123456789 (optional)">
 
-        CURRENT_MESSAGES = [x.strip() for x in data.get('messages', '').split(',') if x.strip()]
-        CURRENT_NC_TITLES = [x.strip() for x in data.get('nc_titles', '').split('\n') if x.strip()]
-        MSG_DELAY = int(data.get('msg_delay', 25))
-        NC_DELAY = int(data.get('nc_delay', 8))
-        TARGET_THREAD_ID = data.get('thread_id', '').strip()
+            <h3>🎯 Specific Group Chat Thread ID</h3>
+            <input type="text" id="thread_id" placeholder="Thread ID (example: 117390744240357)">
 
-        is_running = True
-        threading.Thread(target=lambda: asyncio.run(bot_main()), daemon=True).start()
-        
-        return jsonify({"status": "started"})
+            <button onclick="startWithSession()">🔑 LOGIN & START BOT</button>
+        </div>
+    </div>
 
-    except Exception as e:
-        log(f"❌ Login Failed: {e}")
-        return jsonify({"error": str(e)}), 400
+    <script>
+        function switchTab(n) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab'+n).classList.add('active');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab')[n].classList.add('active');
+        }
 
-@app.route('/stop')
-def stop_bot():
-    global is_running
-    is_running = False
-    return jsonify({"status": "stopped"})
+        async function startWithSession() {
+            const data = {
+                sessionid: document.getElementById('sessionid').value.trim(),
+                ds_user_id: document.getElementById('ds_user_id').value.trim(),
+                thread_id: document.getElementById('thread_id').value.trim(),
+                messages: document.getElementById('messages').value,
+                nc_titles: document.getElementById('nc_titles').value,
+                msg_delay: document.getElementById('msg_delay').value,
+                nc_delay: document.getElementById('nc_delay').value
+            };
+            await fetch('/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+        }
 
-async def bot_main():
-    global round_number
-    while is_running:
-        try:
-            log(f"🔄 ROUND {round_number} STARTED")
+        async function stopBot() {
+            await fetch('/stop');
+        }
 
-            if TARGET_THREAD_ID:
-                # Sirf specific group pe kaam karo
-                log(f"🎯 Targeting Specific Group → Thread ID: {TARGET_THREAD_ID}")
-                groups = [{"id": TARGET_THREAD_ID}]
-            else:
-                threads = await asyncio.to_thread(client.direct_threads, amount=100)
-                groups = [t for t in threads if getattr(t, "is_group", False)]
-
-            for index, thread in enumerate(groups, 1):
-                if not is_running: break
-
-                gid = thread["id"] if isinstance(thread, dict) else thread.id
-
-                # Message Send
-                if CURRENT_MESSAGES:
-                    msg = CURRENT_MESSAGES[round_number % len(CURRENT_MESSAGES)]
-                    try:
-                        await asyncio.to_thread(client.direct_send, msg, thread_ids=[gid])
-                        log(f"📨 Sent → GC {index}")
-                    except:
-                        log(f"⚠ Send Failed → GC {index}")
-
-                # Name Change
-                if CURRENT_NC_TITLES:
-                    title = CURRENT_NC_TITLES[round_number % len(CURRENT_NC_TITLES)]
-                    try:
-                        client.private_request(f"direct_v2/threads/{gid}/update_title/", {"title": title})
-                        log(f"💠 NC Applied → {title}")
-                    except:
-                        pass
-
-                await asyncio.sleep(MSG_DELAY)
-
-            round_number += 1
-            await asyncio.sleep(90)
-
-        except Exception as e:
-            log(f"⚠ Error: {e}")
-            await asyncio.sleep(60)
-
-if __name__ == "__main__":
-    print("🌐 SUJAL CONTROL PANEL → http://127.0.0.1:5000")
-    app.run(host="0.0.0.0", port=5000)
+        setInterval(async () => {
+            const res = await fetch('/logs');
+            const text = await res.text();
+            document.getElementById('liveLogs').innerHTML = text;
+        }, 1500);
+    </script>
+</body>
+</html>
