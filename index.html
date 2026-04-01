@@ -16,26 +16,8 @@
         input, textarea { width:100%; padding:10px; margin:8px 0; background:#0a0e14; color:#00ff88; border:1px solid #00ff88; }
         button { width:100%; padding:12px; margin:8px 0; background:#00ff88; color:black; font-weight:bold; border:none; cursor:pointer; }
         button:hover { background:#00cc6a; }
-        
-        /* Redesigned Console */
-        .console {
-            height: 52vh;
-            background: #000000;
-            border: 2px solid #00ff88;
-            padding: 15px;
-            overflow-y: auto;
-            font-size: 15px;
-            line-height: 1.6;
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
-        }
-        .log-line {
-            margin: 3px 0;
-            white-space: pre-wrap;
-        }
-        .log-success { color: #00ff88; }
-        .log-error { color: #ff3366; }
-        .log-info { color: #00ccff; }
-        .timestamp { color: #666; font-size: 13px; margin-right: 8px; }
+        .console { height:52vh; background:#000; border:2px solid #00ff88; padding:15px; overflow-y:auto; font-size:15px; line-height:1.6; box-shadow:0 0 15px rgba(0,255,136,0.3); }
+        .log-line { margin:4px 0; white-space:pre-wrap; }
     </style>
 </head>
 <body>
@@ -66,7 +48,7 @@
     <div class="content" id="tab1">
         <div class="panel">
             <h2>📨 Messages (Comma Separated)</h2>
-            <textarea id="messages" rows="10" placeholder="Messages comma se alag karke daalo..."></textarea>
+            <textarea id="messages" rows="8"></textarea>
         </div>
     </div>
 
@@ -75,8 +57,6 @@
         <div class="panel">
             <h2>💠 Name Change Titles (One Per Line)</h2>
             <textarea id="nc_titles" rows="8"></textarea>
-            
-            <h3>⏱️ Delay Settings</h3>
             <input type="number" id="msg_delay" value="25" placeholder="Message Delay (seconds)">
             <input type="number" id="nc_delay" value="8" placeholder="Name Change Delay (seconds)">
         </div>
@@ -85,9 +65,8 @@
     <!-- Session Login -->
     <div class="content" id="tab3">
         <div class="panel">
-            <h2>🔑 Session Login (Session ID se)</h2>
-            <input type="text" id="sessionid" placeholder="sessionid = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
-            <input type="text" id="ds_user_id" placeholder="ds_user_id = 1234567890123456789 (optional)">
+            <h2>🔑 Session Login</h2>
+            <textarea id="session_json" rows="10" placeholder="Yahan pura session.json paste kar do (jo tumne bheja hai)"></textarea>
             <input type="text" id="thread_id" placeholder="Thread ID = 117390744240357">
             <button onclick="startWithSession()">🔑 LOGIN & START BOT</button>
         </div>
@@ -103,8 +82,7 @@
 
         async function startWithSession() {
             const data = {
-                sessionid: document.getElementById('sessionid').value.trim(),
-                ds_user_id: document.getElementById('ds_user_id').value.trim(),
+                session_json: document.getElementById('session_json').value,
                 thread_id: document.getElementById('thread_id').value.trim(),
                 messages: document.getElementById('messages').value,
                 nc_titles: document.getElementById('nc_titles').value,
@@ -122,14 +100,12 @@
             await fetch('/stop');
         }
 
-        // Continuous Console Update with better design
         setInterval(async () => {
             const res = await fetch('/logs');
             const text = await res.text();
-            const consoleDiv = document.getElementById('liveLogs');
-            consoleDiv.innerHTML = text;
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;  // Auto scroll
-        }, 800);  // Har 0.8 second mein update
+            document.getElementById('liveLogs').innerHTML = text;
+            document.getElementById('liveLogs').scrollTop = document.getElementById('liveLogs').scrollHeight;
+        }, 800);
     </script>
 </body>
 </html>
