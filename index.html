@@ -16,7 +16,7 @@
         input, textarea { width:100%; padding:10px; margin:8px 0; background:#0a0e14; color:#00ff88; border:1px solid #00ff88; }
         button { width:100%; padding:12px; margin:8px 0; background:#00ff88; color:black; font-weight:bold; border:none; cursor:pointer; }
         button:hover { background:#00cc6a; }
-        .console { height:48vh; background:#000; border:2px solid #00ff88; padding:15px; overflow-y:auto; font-size:15px; line-height:1.6; box-shadow:0 0 15px rgba(0,255,136,0.3); }
+        .console { height:52vh; background:#000; border:2px solid #00ff88; padding:15px; overflow-y:auto; font-size:15px; line-height:1.6; box-shadow:0 0 15px rgba(0,255,136,0.3); }
     </style>
 </head>
 <body>
@@ -70,8 +70,8 @@
             <input type="text" id="thread_id" placeholder="Thread ID = 117390744240357">
             <button onclick="firstTimeLogin()">🔑 LOGIN & AUTO SAVE SESSION</button>
 
-            <h3 style="margin-top:25px; color:#00ccff;">Ya Direct Session JSON Paste Karo (Cookies Array)</h3>
-            <textarea id="session_json" rows="8" placeholder="Yahan pura session.json paste kar do..."></textarea>
+            <h3 style="margin-top:25px; color:#00ccff;">Ya Pura Session JSON Paste Karo</h3>
+            <textarea id="session_json" rows="8" placeholder="Yahan pura session.json (cookies array) paste karo..."></textarea>
             <button onclick="startWithSessionJSON()">🚀 START WITH SESSION JSON</button>
         </div>
     </div>
@@ -113,7 +113,6 @@
             await fetch('/stop');
         }
 
-        // Continuous Console Update
         setInterval(async () => {
             const res = await fetch('/logs');
             const text = await res.text();
