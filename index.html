@@ -4,121 +4,130 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SUJAL | SX⁷ - ADVANCED CONTROL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { background:#0a0e14; color:#00ff88; font-family:'Courier New', monospace; margin:0; padding:0; }
-        .header { text-align:center; padding:20px; background:#161b22; font-size:28px; border-bottom:3px solid #00ff88; }
-        .tabs { display:flex; background:#161b22; }
-        .tab { padding:15px 20px; cursor:pointer; flex:1; text-align:center; }
-        .tab.active { background:#0f1419; border-bottom:3px solid #00ff88; }
-        .content { padding:20px; display:none; }
-        .content.active { display:block; }
-        .panel { background:#161b22; border:1px solid #00ff88; padding:15px; margin:10px 0; border-radius:6px; }
-        input, textarea { width:100%; padding:10px; margin:8px 0; background:#0a0e14; color:#00ff88; border:1px solid #00ff88; }
-        button { width:100%; padding:12px; margin:8px 0; background:#00ff88; color:black; font-weight:bold; border:none; cursor:pointer; }
-        button:hover { background:#00cc6a; }
-        .console { height:52vh; background:#000; border:2px solid #00ff88; padding:15px; overflow-y:auto; font-size:15px; line-height:1.6; box-shadow:0 0 15px rgba(0,255,136,0.3); }
+        body { background:#0a0e14; color:#00ff88; font-family:'Courier New', monospace; }
+        .header { background:#161b22; padding:25px; text-align:center; border-bottom:3px solid #00ff88; font-size:28px; }
+        .card { background:rgba(0,255,0,0.08); border:2px solid #00ff88; border-radius:12px; }
+        input, textarea { background:#111; color:#00ff88; border:1px solid #00ff88; }
+        .console { 
+            height: 460px; 
+            background:#000; 
+            border:2px solid #00ff88; 
+            padding:15px; 
+            overflow-y:auto; 
+            font-size:14.5px; 
+            line-height:1.5;
+        }
+        .btn-start { background:#00ff88; color:#000; font-weight:bold; }
+        .btn-stop { background:#ff3366; color:white; font-weight:bold; }
+        .status-running { color:#0f0; animation: blink 1.2s infinite; }
+        @keyframes blink { 50% { opacity: 0.4; } }
     </style>
 </head>
 <body>
-    <div class="header">✦ SUJAL | SX⁷ - ADVANCED SINGLE ACCOUNT ✦</div>
+<div class="container py-4">
+    <div class="header">
+        ✦ SUJAL | SX⁷ - ADVANCED SINGLE ACCOUNT ✦
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-lg-7">
+            <div class="card p-4 mb-4">
+                <h4 class="mb-3 text-center">⚙️ CONFIGURATION</h4>
+                <form id="form">
+                    <div class="mb-3">
+                        <label class="form-label">Session ID</label>
+                        <textarea name="sessionid" class="form-control" rows="2" placeholder="sessionid paste karo" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Thread ID (Specific Group Chat)</label>
+                        <input name="thread_id" type="text" class="form-control" placeholder="117390744240357" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Messages (1 per line)</label>
+                        <textarea name="messages" class="form-control" rows="6" placeholder="Message 1\nMessage 2" required></textarea>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Message Delay (sec)</label>
+                            <input name="delay" type="number" step="0.1" class="form-control" value="25">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">NC Delay (sec)</label>
+                            <input name="nc_delay" type="number" class="form-control" value="8">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Group Name Base</label>
+                            <input name="group_name" type="text" class="form-control" placeholder="SUJAL BAAP">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card p-4">
+                <h4 class="mb-3 text-center">📊 STATUS</h4>
+                <div class="text-center mb-4">
+                    <span id="status" class="badge fs-3 px-5 py-3">STOPPED</span>
+                </div>
+                <div class="d-grid gap-2">
+                    <button onclick="startBomb()" class="btn btn-start btn-lg">▶ START BOT</button>
+                    <button onclick="stopBomb()" class="btn btn-stop btn-lg">⛔ STOP BOT</button>
+                </div>
+                <div class="mt-4 text-center">
+                    <small>Sent: <span id="sent" class="fw-bold">0</span> | Uptime: <span id="uptime">00:00:00</span></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-4 p-4">
+        <h4 class="mb-3 text-center">📜 LIVE CONSOLE</h4>
+        <div id="console" class="console"></div>
+    </div>
+</div>
+
+<script>
+function updateStatus() {
+    fetch("/status")
+        .then(r => r.json())
+        .then(d => {
+            document.getElementById("sent").innerText = d.sent;
+            document.getElementById("uptime").innerText = d.uptime;
+            
+            const statusEl = document.getElementById("status");
+            if (d.running) {
+                statusEl.innerText = "RUNNING";
+                statusEl.className = "badge bg-danger fs-3 px-5 py-3 status-running";
+            } else {
+                statusEl.innerText = "STOPPED";
+                statusEl.className = "badge bg-secondary fs-3 px-5 py-3";
+            }
+
+            const consoleDiv = document.getElementById("console");
+            consoleDiv.innerHTML = d.logs.map(l => `<div>${l}</div>`).join("");
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        });
+}
+
+function startBomb() {
+    const form = document.getElementById("form");
+    const formData = new FormData(form);
     
-    <div class="tabs">
-        <div class="tab active" onclick="switchTab(0)">Dashboard</div>
-        <div class="tab" onclick="switchTab(1)">Messages</div>
-        <div class="tab" onclick="switchTab(2)">Name Change</div>
-        <div class="tab" onclick="switchTab(3)">Session Login</div>
-    </div>
+    fetch("/start", { method: "POST", body: formData })
+        .then(() => updateStatus());
+}
 
-    <!-- Dashboard -->
-    <div class="content active" id="tab0">
-        <div class="panel">
-            <h2>🚀 STATUS</h2>
-            <div id="status" style="padding:12px; background:#1a2a1f; font-size:18px;">Stopped</div>
-            <button onclick="startBot()">▶ START BOT</button>
-            <button onclick="stopBot()">⛔ STOP BOT</button>
-        </div>
-        <div class="panel">
-            <h2>📜 LIVE CONSOLE</h2>
-            <div class="console" id="liveLogs"></div>
-        </div>
-    </div>
+function stopBomb() {
+    fetch("/stop", { method: "POST" })
+        .then(() => updateStatus());
+}
 
-    <!-- Messages -->
-    <div class="content" id="tab1">
-        <div class="panel">
-            <h2>📨 Messages (Comma Separated)</h2>
-            <textarea id="messages" rows="8"></textarea>
-        </div>
-    </div>
-
-    <!-- Name Change + Delays -->
-    <div class="content" id="tab2">
-        <div class="panel">
-            <h2>💠 Name Change Titles (One Per Line)</h2>
-            <textarea id="nc_titles" rows="8"></textarea>
-            <input type="number" id="msg_delay" value="25" placeholder="Message Delay (seconds)">
-            <input type="number" id="nc_delay" value="8" placeholder="Name Change Delay (seconds)">
-        </div>
-    </div>
-
-    <!-- Session Login -->
-    <div class="content" id="tab3">
-        <div class="panel">
-            <h2>🔑 Pehli Baar Login (Username + Password)</h2>
-            <input type="text" id="username" placeholder="Instagram Username">
-            <input type="password" id="password" placeholder="Instagram Password">
-            <input type="text" id="thread_id" placeholder="Thread ID = 117390744240357">
-            <button onclick="firstTimeLogin()">🔑 LOGIN & AUTO SAVE SESSION</button>
-
-            <h3 style="margin-top:25px; color:#00ccff;">Ya Pura Session JSON Paste Karo</h3>
-            <textarea id="session_json" rows="8" placeholder="Yahan pura session.json (cookies array) paste karo..."></textarea>
-            <button onclick="startWithSessionJSON()">🚀 START WITH SESSION JSON</button>
-        </div>
-    </div>
-
-    <script>
-        function switchTab(n) {
-            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
-            document.getElementById('tab'+n).classList.add('active');
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab')[n].classList.add('active');
-        }
-
-        async function firstTimeLogin() {
-            const data = {
-                username: document.getElementById('username').value.trim(),
-                password: document.getElementById('password').value.trim(),
-                thread_id: document.getElementById('thread_id').value.trim()
-            };
-            await fetch('/first_login', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-        }
-
-        async function startWithSessionJSON() {
-            const data = {
-                session_json: document.getElementById('session_json').value,
-                thread_id: document.getElementById('thread_id').value.trim()
-            };
-            await fetch('/start', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
-            });
-        }
-
-        async function stopBot() {
-            await fetch('/stop');
-        }
-
-        setInterval(async () => {
-            const res = await fetch('/logs');
-            const text = await res.text();
-            document.getElementById('liveLogs').innerHTML = text;
-            document.getElementById('liveLogs').scrollTop = document.getElementById('liveLogs').scrollHeight;
-        }, 800);
-    </script>
+// Auto update
+setInterval(updateStatus, 1500);
+updateStatus();
+</script>
 </body>
 </html>
