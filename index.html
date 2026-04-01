@@ -16,8 +16,7 @@
         input, textarea { width:100%; padding:10px; margin:8px 0; background:#0a0e14; color:#00ff88; border:1px solid #00ff88; }
         button { width:100%; padding:12px; margin:8px 0; background:#00ff88; color:black; font-weight:bold; border:none; cursor:pointer; }
         button:hover { background:#00cc6a; }
-        .console { height:52vh; background:#000; border:2px solid #00ff88; padding:15px; overflow-y:auto; font-size:15px; line-height:1.6; box-shadow:0 0 15px rgba(0,255,136,0.3); }
-        .log-line { margin:4px 0; white-space:pre-wrap; }
+        .console { height:48vh; background:#000; border:2px solid #00ff88; padding:15px; overflow-y:auto; font-size:15px; line-height:1.6; box-shadow:0 0 15px rgba(0,255,136,0.3); }
     </style>
 </head>
 <body>
@@ -65,10 +64,15 @@
     <!-- Session Login -->
     <div class="content" id="tab3">
         <div class="panel">
-            <h2>🔑 Session Login</h2>
-            <textarea id="session_json" rows="10" placeholder="Yahan pura session.json paste kar do (jo tumne bheja hai)"></textarea>
+            <h2>🔑 Pehli Baar Login (Username + Password)</h2>
+            <input type="text" id="username" placeholder="Instagram Username">
+            <input type="password" id="password" placeholder="Instagram Password">
             <input type="text" id="thread_id" placeholder="Thread ID = 117390744240357">
-            <button onclick="startWithSession()">🔑 LOGIN & START BOT</button>
+            <button onclick="firstTimeLogin()">🔑 LOGIN & AUTO SAVE SESSION</button>
+
+            <h3 style="margin-top:25px; color:#00ccff;">Ya Direct Session JSON Paste Karo (Cookies Array)</h3>
+            <textarea id="session_json" rows="8" placeholder="Yahan pura session.json paste kar do..."></textarea>
+            <button onclick="startWithSessionJSON()">🚀 START WITH SESSION JSON</button>
         </div>
     </div>
 
@@ -80,14 +84,23 @@
             document.querySelectorAll('.tab')[n].classList.add('active');
         }
 
-        async function startWithSession() {
+        async function firstTimeLogin() {
+            const data = {
+                username: document.getElementById('username').value.trim(),
+                password: document.getElementById('password').value.trim(),
+                thread_id: document.getElementById('thread_id').value.trim()
+            };
+            await fetch('/first_login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
+        }
+
+        async function startWithSessionJSON() {
             const data = {
                 session_json: document.getElementById('session_json').value,
-                thread_id: document.getElementById('thread_id').value.trim(),
-                messages: document.getElementById('messages').value,
-                nc_titles: document.getElementById('nc_titles').value,
-                msg_delay: document.getElementById('msg_delay').value,
-                nc_delay: document.getElementById('nc_delay').value
+                thread_id: document.getElementById('thread_id').value.trim()
             };
             await fetch('/start', {
                 method: 'POST',
@@ -100,6 +113,7 @@
             await fetch('/stop');
         }
 
+        // Continuous Console Update
         setInterval(async () => {
             const res = await fetch('/logs');
             const text = await res.text();
