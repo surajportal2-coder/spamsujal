@@ -8,7 +8,6 @@ from instagrapi import Client
 
 app = Flask(__name__)
 
-# ===================== GLOBAL =====================
 client = None
 is_running = False
 logs = []
@@ -29,11 +28,7 @@ def log(msg):
     print(line)
 
 def get_random_fingerprint():
-    agents = [
-        "Instagram 312.0.0.22.114 Android",
-        "Instagram 311.0.0.21.111 Android",
-        "Instagram 310.0.0.20.108 Android"
-    ]
+    agents = ["Instagram 312.0.0.22.114 Android", "Instagram 311.0.0.21.111 Android", "Instagram 310.0.0.20.108 Android"]
     return agents[round_number % len(agents)]
 
 def setup_fingerprint(cl):
@@ -60,21 +55,30 @@ def start_bot():
     global client, is_running, CURRENT_MESSAGES, CURRENT_NC_TITLES, MSG_DELAY, NC_DELAY, TARGET_THREAD_ID
 
     data = request.json
-    sessionid = data.get('sessionid', '').strip()
+    session_json = data.get('session_json', '').strip()
 
     cl = Client()
     setup_fingerprint(cl)
 
     try:
-        if sessionid:
-            cl.login_by_sessionid(sessionid)
-            log("✅ Login Successful using Session ID")
+        if session_json:
+            # User ne pura session.json (cookie array) paste kiya hai
+            cookies = json.loads(session_json)
+            cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies}
             
-            ds_user_id = data.get('ds_user_id', '').strip()
-            if ds_user_id:
-                cl.set_user_id(ds_user_id)
+            # Session ID extract karo
+            sessionid = cookie_dict.get('sessionid')
+            ds_user_id = cookie_dict.get('ds_user_id')
+            
+            if sessionid:
+                cl.login_by_sessionid(sessionid)
+                if ds_user_id:
+                    cl.set_user_id(ds_user_id)
+                log("✅ Login Successful using Full Session JSON")
+            else:
+                return jsonify({"error": "Session ID nahi mila session.json mein"}), 400
         else:
-            return jsonify({"error": "Session ID daalna zaroori hai"}), 400
+            return jsonify({"error": "Session JSON paste karo"}), 400
 
         client = cl
 
@@ -86,7 +90,6 @@ def start_bot():
 
         is_running = True
         threading.Thread(target=lambda: asyncio.run(bot_main()), daemon=True).start()
-        
         return jsonify({"status": "started"})
 
     except Exception as e:
@@ -106,7 +109,6 @@ async def bot_main():
             log(f"🔄 ROUND {round_number} STARTED")
 
             if TARGET_THREAD_ID:
-                # Sirf specific group pe kaam karo
                 log(f"🎯 Targeting Specific Group → Thread ID: {TARGET_THREAD_ID}")
                 groups = [{"id": TARGET_THREAD_ID}]
             else:
@@ -115,10 +117,8 @@ async def bot_main():
 
             for index, thread in enumerate(groups, 1):
                 if not is_running: break
-
                 gid = thread["id"] if isinstance(thread, dict) else thread.id
 
-                # Message Send
                 if CURRENT_MESSAGES:
                     msg = CURRENT_MESSAGES[round_number % len(CURRENT_MESSAGES)]
                     try:
@@ -127,7 +127,6 @@ async def bot_main():
                     except:
                         log(f"⚠ Send Failed → GC {index}")
 
-                # Name Change
                 if CURRENT_NC_TITLES:
                     title = CURRENT_NC_TITLES[round_number % len(CURRENT_NC_TITLES)]
                     try:
