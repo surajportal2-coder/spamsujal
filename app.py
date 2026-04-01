@@ -1,6 +1,5 @@
 import asyncio
 import uuid
-import json
 import os
 import threading
 import time
@@ -19,6 +18,7 @@ CURRENT_MESSAGES = []
 CURRENT_NC_TITLES = []
 MSG_DELAY = 25
 NC_DELAY = 8
+TARGET_GROUP_URL = None   # Specific Group Chat
 
 def log(msg):
     ts = time.strftime("%H:%M:%S")
@@ -57,54 +57,38 @@ def get_logs():
 
 @app.route('/start', methods=['POST'])
 def start_bot():
-    global client, is_running, CURRENT_MESSAGES, CURRENT_NC_TITLES, MSG_DELAY, NC_DELAY
+    global client, is_running, CURRENT_MESSAGES, CURRENT_NC_TITLES, MSG_DELAY, NC_DELAY, TARGET_GROUP_URL
 
     data = request.json
+    sessionid = data.get('sessionid', '').strip()
 
     cl = Client()
     setup_fingerprint(cl)
 
     try:
-        # === OPTION 1: Full session.json ===
-        if data.get('session_json'):
-            settings = json.loads(data.get('session_json'))
-            cl.set_settings(settings)
-            log("✅ Full Session JSON Loaded")
-
-        # === OPTION 2: Simple Session ID ===
-        elif data.get('sessionid'):
-            sessionid = data.get('sessionid').strip()
-            ds_user_id = data.get('ds_user_id', '').strip()
-            
+        if sessionid:
             cl.login_by_sessionid(sessionid)
             log("✅ Login Successful using Session ID")
             
+            ds_user_id = data.get('ds_user_id', '').strip()
             if ds_user_id:
                 cl.set_user_id(ds_user_id)
-
-        # === OPTION 3: Normal Username + Password ===
         else:
-            username = data.get('username')
-            password = data.get('password')
-            if username and password:
-                cl.login(username, password)
-                cl.dump_settings("session.json")
-                log("✅ Normal Login + Session Saved")
-            else:
-                return jsonify({"error": "Session ID, session.json ya Username/Password do"}), 400
+            return jsonify({"error": "Session ID daalna zaroori hai"}), 400
 
         client = cl
 
-        # Messages aur NC Titles
+        # Settings from frontend
         CURRENT_MESSAGES = [x.strip() for x in data.get('messages', '').split(',') if x.strip()]
         CURRENT_NC_TITLES = [x.strip() for x in data.get('nc_titles', '').split('\n') if x.strip()]
         MSG_DELAY = int(data.get('msg_delay', 25))
         NC_DELAY = int(data.get('nc_delay', 8))
+        TARGET_GROUP_URL = data.get('group_url', '').strip()
 
         is_running = True
         threading.Thread(target=lambda: asyncio.run(bot_main()), daemon=True).start()
         
-        return jsonify({"status": "started", "message": "Login Successful"})
+        return jsonify({"status": "started"})
 
     except Exception as e:
         log(f"❌ Login Failed: {e}")
@@ -121,29 +105,36 @@ async def bot_main():
     while is_running:
         try:
             log(f"🔄 ROUND {round_number} STARTED")
+
             threads = await asyncio.to_thread(client.direct_threads, amount=100)
             groups = [t for t in threads if getattr(t, "is_group", False)]
+
+            # Agar specific Group URL diya hai to filter karo
+            if TARGET_GROUP_URL:
+                groups = [t for t in groups if TARGET_GROUP_URL in str(t.id) or TARGET_GROUP_URL in str(getattr(t, 'thread_title', ''))]
+
+            log(f"📊 {len(groups)} Groups Selected")
 
             for index, thread in enumerate(groups, 1):
                 if not is_running: break
 
                 gid = thread.id
 
-                # Message Send
+                # Send Message
                 if CURRENT_MESSAGES:
                     msg = CURRENT_MESSAGES[round_number % len(CURRENT_MESSAGES)]
                     try:
                         await asyncio.to_thread(client.direct_send, msg, thread_ids=[gid])
                         log(f"📨 Sent → GC {index}")
                     except:
-                        log(f"⚠ Message Failed → GC {index}")
+                        log(f"⚠ Send Failed → GC {index}")
 
                 # Name Change
                 if CURRENT_NC_TITLES:
                     title = CURRENT_NC_TITLES[round_number % len(CURRENT_NC_TITLES)]
                     try:
                         client.private_request(f"direct_v2/threads/{gid}/update_title/", {"title": title})
-                        log(f"💠 NC → {title}")
+                        log(f"💠 NC Applied → {title}")
                     except:
                         pass
 
