@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUJAL | SX⁷ - ADVANCED CONTROL</title>
+    <style>
+        body { background:#0a0e14; color:#00ff88; font-family:'Courier New', monospace; margin:0; padding:0; }
+        .header { text-align:center; padding:20px; background:#161b22; font-size:28px; border-bottom:3px solid #00ff88; }
+        .tabs { display:flex; background:#161b22; }
+        .tab { padding:15px 20px; cursor:pointer; }
+        .tab.active { background:#0f1419; border-bottom:3px solid #00ff88; }
+        .content { padding:20px; display:none; }
+        .content.active { display:block; }
+        .panel { background:#161b22; border:1px solid #00ff88; padding:15px; margin:10px 0; border-radius:6px; }
+        input, textarea { width:100%; padding:10px; margin:8px 0; background:#0a0e14; color:#00ff88; border:1px solid #00ff88; }
+        button { width:100%; padding:12px; margin:8px 0; background:#00ff88; color:black; font-weight:bold; border:none; cursor:pointer; }
+        button:hover { background:#00cc6a; }
+        .logs { height:50vh; overflow-y:auto; background:#0a0e14; padding:12px; border:1px solid #00ff88; }
+    </style>
+</head>
+<body>
+    <div class="header">✦ SUJAL | SX⁷ - ADVANCED SINGLE ACCOUNT ✦</div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab(0)">Dashboard</div>
+        <div class="tab" onclick="switchTab(1)">Messages</div>
+        <div class="tab" onclick="switchTab(2)">Name Change</div>
+        <div class="tab" onclick="switchTab(3)">Session Login</div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="content active" id="tab0">
+        <div class="panel">
+            <h2>🚀 STATUS</h2>
+            <div id="status" style="padding:10px;background:#1a2a1f;">Stopped</div>
+            <button onclick="startBot()">▶ START BOT</button>
+            <button onclick="stopBot()">⛔ STOP BOT</button>
+        </div>
+        <div class="panel">
+            <h2>📜 LIVE LOGS</h2>
+            <div class="logs" id="liveLogs"></div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="content" id="tab1">
+        <div class="panel">
+            <h2>📨 Messages (Comma Separated)</h2>
+            <textarea id="messages" rows="10"></textarea>
+        </div>
+    </div>
+
+    <!-- Name Change -->
+    <div class="content" id="tab2">
+        <div class="panel">
+            <h2>💠 Name Change Titles (One Per Line)</h2>
+            <textarea id="nc_titles" rows="10"></textarea>
+            <input type="number" id="nc_delay" value="8" placeholder="NC Delay (seconds)">
+        </div>
+    </div>
+
+    <!-- Session Login -->
+    <div class="content" id="tab3">
+        <div class="panel">
+            <h2>🔑 Session Login (Recommended)</h2>
+            <textarea id="session_json" rows="12" placeholder="Paste your full session.json content here..."></textarea>
+            <input type="text" id="username" placeholder="Username (optional)">
+            <input type="password" id="password" placeholder="Password (optional)">
+            <button onclick="startWithSession()">🔑 LOGIN WITH SESSION</button>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(n) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.getElementById('tab'+n).classList.add('active');
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab')[n].classList.add('active');
+        }
+
+        async function startBot() {
+            const data = {
+                messages: document.getElementById('messages').value,
+                nc_titles: document.getElementById('nc_titles').value,
+                nc_delay: document.getElementById('nc_delay').value
+            };
+            await fetch('/start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+        }
+
+        async function startWithSession() {
+            const data = {
+                session_json: document.getElementById('session_json').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+                messages: document.getElementById('messages').value,
+                nc_titles: document.getElementById('nc_titles').value,
+                nc_delay: document.getElementById('nc_delay').value
+            };
+            await fetch('/start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+        }
+
+        async function stopBot() {
+            await fetch('/stop');
+        }
+
+        setInterval(async () => {
+            const res = await fetch('/logs');
+            const text = await res.text();
+            document.getElementById('liveLogs').innerHTML = text;
+        }, 1500);
+    </script>
+</body>
+</html>
