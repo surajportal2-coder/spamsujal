@@ -16,7 +16,7 @@
         input, textarea { width:100%; padding:10px; margin:8px 0; background:#0a0e14; color:#00ff88; border:1px solid #00ff88; }
         button { width:100%; padding:12px; margin:8px 0; background:#00ff88; color:black; font-weight:bold; border:none; cursor:pointer; }
         button:hover { background:#00cc6a; }
-        .logs { height:52vh; overflow-y:auto; background:#0a0e14; padding:12px; border:1px solid #00ff88; white-space:pre-wrap; }
+        .logs { height:48vh; overflow-y:auto; background:#0a0e14; padding:12px; border:1px solid #00ff88; white-space:pre-wrap; }
     </style>
 </head>
 <body>
@@ -51,11 +51,14 @@
         </div>
     </div>
 
-    <!-- Name Change -->
+    <!-- Name Change + Delays -->
     <div class="content" id="tab2">
         <div class="panel">
             <h2>💠 Name Change Titles (One Per Line)</h2>
-            <textarea id="nc_titles" rows="10" placeholder="Ek line mein ek title..."></textarea>
+            <textarea id="nc_titles" rows="8"></textarea>
+            
+            <h3>⏱️ Delay Settings</h3>
+            <input type="number" id="msg_delay" value="25" placeholder="Message Delay (seconds)">
             <input type="number" id="nc_delay" value="8" placeholder="Name Change Delay (seconds)">
         </div>
     </div>
@@ -70,13 +73,6 @@
 
             <h3>🎯 Target Group Chat URL (Optional)</h3>
             <input type="text" id="group_url" placeholder="https://www.instagram.com/direct/t/117390744240357/">
-
-            <h3>📨 Messages (Comma Separated)</h3>
-            <textarea id="messages" rows="6"></textarea>
-
-            <h3>💠 Name Change Titles</h3>
-            <textarea id="nc_titles" rows="6"></textarea>
-            <input type="number" id="nc_delay" value="8" placeholder="NC Delay (seconds)">
 
             <button onclick="startWithSession()">🔑 LOGIN & START BOT</button>
         </div>
@@ -97,6 +93,7 @@
                 group_url: document.getElementById('group_url').value.trim(),
                 messages: document.getElementById('messages').value,
                 nc_titles: document.getElementById('nc_titles').value,
+                msg_delay: document.getElementById('msg_delay').value,
                 nc_delay: document.getElementById('nc_delay').value
             };
             await fetch('/start', {
@@ -110,7 +107,6 @@
             await fetch('/stop');
         }
 
-        // Auto refresh logs
         setInterval(async () => {
             const res = await fetch('/logs');
             const text = await res.text();
