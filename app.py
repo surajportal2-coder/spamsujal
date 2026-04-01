@@ -3,7 +3,6 @@ import uuid
 import os
 import threading
 import time
-import re
 from flask import Flask, request, jsonify, send_from_directory
 from instagrapi import Client
 
@@ -19,7 +18,7 @@ CURRENT_MESSAGES = []
 CURRENT_NC_TITLES = []
 MSG_DELAY = 25
 NC_DELAY = 8
-TARGET_GROUP_URL = None
+TARGET_THREAD_ID = None
 
 def log(msg):
     ts = time.strftime("%H:%M:%S")
@@ -58,7 +57,7 @@ def get_logs():
 
 @app.route('/start', methods=['POST'])
 def start_bot():
-    global client, is_running, CURRENT_MESSAGES, CURRENT_NC_TITLES, MSG_DELAY, NC_DELAY, TARGET_GROUP_URL
+    global client, is_running, CURRENT_MESSAGES, CURRENT_NC_TITLES, MSG_DELAY, NC_DELAY, TARGET_THREAD_ID
 
     data = request.json
     sessionid = data.get('sessionid', '').strip()
@@ -79,12 +78,11 @@ def start_bot():
 
         client = cl
 
-        # Frontend se values
         CURRENT_MESSAGES = [x.strip() for x in data.get('messages', '').split(',') if x.strip()]
         CURRENT_NC_TITLES = [x.strip() for x in data.get('nc_titles', '').split('\n') if x.strip()]
         MSG_DELAY = int(data.get('msg_delay', 25))
         NC_DELAY = int(data.get('nc_delay', 8))
-        TARGET_GROUP_URL = data.get('group_url', '').strip()
+        TARGET_THREAD_ID = data.get('thread_id', '').strip()
 
         is_running = True
         threading.Thread(target=lambda: asyncio.run(bot_main()), daemon=True).start()
@@ -107,26 +105,18 @@ async def bot_main():
         try:
             log(f"🔄 ROUND {round_number} STARTED")
 
-            threads = await asyncio.to_thread(client.direct_threads, amount=100)
-            groups = [t for t in threads if getattr(t, "is_group", False)]
-
-            # === SPECIFIC GROUP FILTERING ===
-            if TARGET_GROUP_URL:
-                # URL se thread ID nikaalo
-                match = re.search(r'/direct/t/(\d+)', TARGET_GROUP_URL)
-                if match:
-                    target_id = match.group(1)
-                    groups = [t for t in groups if str(t.id) == target_id]
-                    log(f"🎯 Specific Group Filter Applied → ID: {target_id}")
-                else:
-                    log("⚠ Invalid Group URL format")
-
-            log(f"📊 {len(groups)} Groups Selected")
+            if TARGET_THREAD_ID:
+                # Sirf specific group pe kaam karo
+                log(f"🎯 Targeting Specific Group → Thread ID: {TARGET_THREAD_ID}")
+                groups = [{"id": TARGET_THREAD_ID}]
+            else:
+                threads = await asyncio.to_thread(client.direct_threads, amount=100)
+                groups = [t for t in threads if getattr(t, "is_group", False)]
 
             for index, thread in enumerate(groups, 1):
                 if not is_running: break
 
-                gid = thread.id
+                gid = thread["id"] if isinstance(thread, dict) else thread.id
 
                 # Message Send
                 if CURRENT_MESSAGES:
