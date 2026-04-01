@@ -77,7 +77,7 @@ def first_login():
         global TARGET_THREAD_ID
         TARGET_THREAD_ID = thread_id
         
-        return jsonify({"status": "success", "message": "Session saved"})
+        return jsonify({"status": "success", "message": "Session saved successfully"})
         
     except Exception as e:
         log(f"❌ Login Failed: {e}")
@@ -96,12 +96,22 @@ def start_bot():
 
     try:
         if session_json:
-            settings = json.loads(session_json)
-            cl.set_settings(settings)
-            log("✅ Loaded from pasted session.json")
+            # Agar user ne pura cookies array paste kiya hai
+            cookies = json.loads(session_json)
+            cookie_dict = {c['name']: c['value'] for c in cookies}
+            sessionid = cookie_dict.get('sessionid')
+            ds_user_id = cookie_dict.get('ds_user_id')
+            
+            if sessionid:
+                cl.login_by_sessionid(sessionid)
+                if ds_user_id:
+                    cl.set_user_id(ds_user_id)
+                log("✅ Login Successful using pasted session.json (cookies array)")
+            else:
+                return jsonify({"error": "Session ID nahi mila"}), 400
         elif os.path.exists("session.json"):
             cl.load_settings("session.json")
-            log("✅ Automatically loaded saved session.json from server")
+            log("✅ Automatically loaded saved session.json")
         else:
             return jsonify({"error": "Pehle First Time Login karo"}), 400
 
