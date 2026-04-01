@@ -8,7 +8,7 @@
         body { background:#0a0e14; color:#00ff88; font-family:'Courier New', monospace; margin:0; padding:0; }
         .header { text-align:center; padding:20px; background:#161b22; font-size:28px; border-bottom:3px solid #00ff88; }
         .tabs { display:flex; background:#161b22; }
-        .tab { padding:15px 20px; cursor:pointer; }
+        .tab { padding:15px 20px; cursor:pointer; flex:1; text-align:center; }
         .tab.active { background:#0f1419; border-bottom:3px solid #00ff88; }
         .content { padding:20px; display:none; }
         .content.active { display:block; }
@@ -16,7 +16,7 @@
         input, textarea { width:100%; padding:10px; margin:8px 0; background:#0a0e14; color:#00ff88; border:1px solid #00ff88; }
         button { width:100%; padding:12px; margin:8px 0; background:#00ff88; color:black; font-weight:bold; border:none; cursor:pointer; }
         button:hover { background:#00cc6a; }
-        .logs { height:50vh; overflow-y:auto; background:#0a0e14; padding:12px; border:1px solid #00ff88; }
+        .logs { height:52vh; overflow-y:auto; background:#0a0e14; padding:12px; border:1px solid #00ff88; white-space:pre-wrap; }
     </style>
 </head>
 <body>
@@ -33,7 +33,7 @@
     <div class="content active" id="tab0">
         <div class="panel">
             <h2>🚀 STATUS</h2>
-            <div id="status" style="padding:10px;background:#1a2a1f;">Stopped</div>
+            <div id="status" style="padding:12px; background:#1a2a1f; font-size:18px;">Stopped</div>
             <button onclick="startBot()">▶ START BOT</button>
             <button onclick="stopBot()">⛔ STOP BOT</button>
         </div>
@@ -47,7 +47,7 @@
     <div class="content" id="tab1">
         <div class="panel">
             <h2>📨 Messages (Comma Separated)</h2>
-            <textarea id="messages" rows="10"></textarea>
+            <textarea id="messages" rows="10" placeholder="Messages comma se alag karke daalo..."></textarea>
         </div>
     </div>
 
@@ -55,19 +55,30 @@
     <div class="content" id="tab2">
         <div class="panel">
             <h2>💠 Name Change Titles (One Per Line)</h2>
-            <textarea id="nc_titles" rows="10"></textarea>
-            <input type="number" id="nc_delay" value="8" placeholder="NC Delay (seconds)">
+            <textarea id="nc_titles" rows="10" placeholder="Ek line mein ek title..."></textarea>
+            <input type="number" id="nc_delay" value="8" placeholder="Name Change Delay (seconds)">
         </div>
     </div>
 
-    <!-- Session Login -->
+    <!-- Session Login + Group Chat -->
     <div class="content" id="tab3">
         <div class="panel">
-            <h2>🔑 Session Login (Recommended)</h2>
-            <textarea id="session_json" rows="12" placeholder="Paste your full session.json content here..."></textarea>
-            <input type="text" id="username" placeholder="Username (optional)">
-            <input type="password" id="password" placeholder="Password (optional)">
-            <button onclick="startWithSession()">🔑 LOGIN WITH SESSION</button>
+            <h2>🔑 Session Login (Session ID se)</h2>
+            
+            <input type="text" id="sessionid" placeholder="sessionid = xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+            <input type="text" id="ds_user_id" placeholder="ds_user_id = 1234567890123456789 (optional)">
+
+            <h3>🎯 Target Group Chat URL (Optional)</h3>
+            <input type="text" id="group_url" placeholder="https://www.instagram.com/direct/t/117390744240357/">
+
+            <h3>📨 Messages (Comma Separated)</h3>
+            <textarea id="messages" rows="6"></textarea>
+
+            <h3>💠 Name Change Titles</h3>
+            <textarea id="nc_titles" rows="6"></textarea>
+            <input type="number" id="nc_delay" value="8" placeholder="NC Delay (seconds)">
+
+            <button onclick="startWithSession()">🔑 LOGIN & START BOT</button>
         </div>
     </div>
 
@@ -79,31 +90,27 @@
             document.querySelectorAll('.tab')[n].classList.add('active');
         }
 
-        async function startBot() {
-            const data = {
-                messages: document.getElementById('messages').value,
-                nc_titles: document.getElementById('nc_titles').value,
-                nc_delay: document.getElementById('nc_delay').value
-            };
-            await fetch('/start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
-        }
-
         async function startWithSession() {
             const data = {
-                session_json: document.getElementById('session_json').value,
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value,
+                sessionid: document.getElementById('sessionid').value.trim(),
+                ds_user_id: document.getElementById('ds_user_id').value.trim(),
+                group_url: document.getElementById('group_url').value.trim(),
                 messages: document.getElementById('messages').value,
                 nc_titles: document.getElementById('nc_titles').value,
                 nc_delay: document.getElementById('nc_delay').value
             };
-            await fetch('/start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+            await fetch('/start', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            });
         }
 
         async function stopBot() {
             await fetch('/stop');
         }
 
+        // Auto refresh logs
         setInterval(async () => {
             const res = await fetch('/logs');
             const text = await res.text();
