@@ -18,7 +18,7 @@ CURRENT_MESSAGES = []
 CURRENT_NC_TITLES = []
 MSG_DELAY = 25
 NC_DELAY = 8
-TARGET_GROUP_URL = None   # Specific Group Chat
+TARGET_GROUP_URL = None
 
 def log(msg):
     ts = time.strftime("%H:%M:%S")
@@ -78,7 +78,7 @@ def start_bot():
 
         client = cl
 
-        # Settings from frontend
+        # Frontend se values le rahe hain
         CURRENT_MESSAGES = [x.strip() for x in data.get('messages', '').split(',') if x.strip()]
         CURRENT_NC_TITLES = [x.strip() for x in data.get('nc_titles', '').split('\n') if x.strip()]
         MSG_DELAY = int(data.get('msg_delay', 25))
@@ -109,9 +109,9 @@ async def bot_main():
             threads = await asyncio.to_thread(client.direct_threads, amount=100)
             groups = [t for t in threads if getattr(t, "is_group", False)]
 
-            # Agar specific Group URL diya hai to filter karo
+            # Agar specific Group URL diya hai to sirf usi mein kaam karo
             if TARGET_GROUP_URL:
-                groups = [t for t in groups if TARGET_GROUP_URL in str(t.id) or TARGET_GROUP_URL in str(getattr(t, 'thread_title', ''))]
+                groups = [t for t in groups if TARGET_GROUP_URL in str(t.id)]
 
             log(f"📊 {len(groups)} Groups Selected")
 
@@ -120,7 +120,7 @@ async def bot_main():
 
                 gid = thread.id
 
-                # Send Message
+                # Message Send
                 if CURRENT_MESSAGES:
                     msg = CURRENT_MESSAGES[round_number % len(CURRENT_MESSAGES)]
                     try:
