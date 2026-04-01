@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+import json
 import os
 import threading
 import time
@@ -50,6 +51,39 @@ def index():
 def get_logs():
     return "<br>".join(logs[-60:])
 
+# ===================== PEHLI BAAR LOGIN + AUTO SAVE =====================
+@app.route('/first_login', methods=['POST'])
+def first_login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    thread_id = data.get('thread_id', '').strip()
+
+    cl = Client()
+    setup_fingerprint(cl)
+
+    try:
+        cl.login(username, password)
+        cl.dump_settings("session.json")
+        
+        with open("session.json", "r", encoding="utf-8") as f:
+            session_content = f.read()
+        
+        log("✅ LOGIN SUCCESSFUL")
+        log("📁 session.json automatically saved on server")
+        log("🔽 Pura Session JSON neeche copy kar lo:")
+        log(session_content)
+        
+        global TARGET_THREAD_ID
+        TARGET_THREAD_ID = thread_id
+        
+        return jsonify({"status": "success", "message": "Session saved"})
+        
+    except Exception as e:
+        log(f"❌ Login Failed: {e}")
+        return jsonify({"error": str(e)}), 400
+
+# ===================== NORMAL START =====================
 @app.route('/start', methods=['POST'])
 def start_bot():
     global client, is_running, CURRENT_MESSAGES, CURRENT_NC_TITLES, MSG_DELAY, NC_DELAY, TARGET_THREAD_ID
@@ -62,23 +96,14 @@ def start_bot():
 
     try:
         if session_json:
-            # User ne pura session.json (cookie array) paste kiya hai
-            cookies = json.loads(session_json)
-            cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies}
-            
-            # Session ID extract karo
-            sessionid = cookie_dict.get('sessionid')
-            ds_user_id = cookie_dict.get('ds_user_id')
-            
-            if sessionid:
-                cl.login_by_sessionid(sessionid)
-                if ds_user_id:
-                    cl.set_user_id(ds_user_id)
-                log("✅ Login Successful using Full Session JSON")
-            else:
-                return jsonify({"error": "Session ID nahi mila session.json mein"}), 400
+            settings = json.loads(session_json)
+            cl.set_settings(settings)
+            log("✅ Loaded from pasted session.json")
+        elif os.path.exists("session.json"):
+            cl.load_settings("session.json")
+            log("✅ Automatically loaded saved session.json from server")
         else:
-            return jsonify({"error": "Session JSON paste karo"}), 400
+            return jsonify({"error": "Pehle First Time Login karo"}), 400
 
         client = cl
 
@@ -93,7 +118,7 @@ def start_bot():
         return jsonify({"status": "started"})
 
     except Exception as e:
-        log(f"❌ Login Failed: {e}")
+        log(f"❌ Error: {e}")
         return jsonify({"error": str(e)}), 400
 
 @app.route('/stop')
@@ -109,7 +134,7 @@ async def bot_main():
             log(f"🔄 ROUND {round_number} STARTED")
 
             if TARGET_THREAD_ID:
-                log(f"🎯 Targeting Specific Group → Thread ID: {TARGET_THREAD_ID}")
+                log(f"🎯 Targeting Specific Group → {TARGET_THREAD_ID}")
                 groups = [{"id": TARGET_THREAD_ID}]
             else:
                 threads = await asyncio.to_thread(client.direct_threads, amount=100)
