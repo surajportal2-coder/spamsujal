@@ -4,6 +4,7 @@ import threading
 import time
 import random
 import os
+import json
 from datetime import datetime
 
 app = Flask(__name__)
@@ -24,35 +25,45 @@ def bomber():
     
     try:
         cl.login_by_sessionid(cfg["sessionid"])
-        log("LOGIN SUCCESS — BOMBING STARTED")
+        log("✅ LOGIN SUCCESS — BOMBING STARTED")
     except Exception as e:
-        log(f"LOGIN FAILED → {str(e)[:80]}")
+        log(f"❌ LOGIN FAILED → {str(e)[:80]}")
         return
 
     sent_in_cycle = 0
     while state["running"]:
         try:
+            # Spam Message Send
             msg = random.choice(cfg["messages"])
             cl.direct_send(msg, thread_ids=[cfg["thread_id"]])
             sent_in_cycle += 1
             state["sent"] += 1
-            log(f"SENT #{state['sent']} → {msg[:50]}...")
+            log(f"📨 SENT #{state['sent']} → {msg[:50]}...")
 
+            # ================== NAME CHANGE LOGIC ==================
             if sent_in_cycle >= cfg["cycle"]:
                 if cfg["group_name"]:
                     new_name = f"{cfg['group_name']} → {datetime.now().strftime('%I:%M:%S %p')}"
                     try:
                         cl.direct_thread_change_title(cfg["thread_id"], new_name)
-                        log(f"GROUP NAME CHANGED → {new_name}")
-                    except:
-                        log("Name change failed")
-                log(f"BREAK {cfg['break_sec']} SECONDS")
+                        log(f"💠 NAME CHANGE SUCCESS → {new_name}")
+                    except Exception as nc_error:
+                        try:
+                            cl.direct_thread_update_group_name(cfg["thread_id"], new_name)
+                            log(f"💠 NAME CHANGE SUCCESS → {new_name}")
+                        except Exception as e2:
+                            log(f"⚠ NAME CHANGE FAILED (spam continue rahega) → {str(e2)[:80]}")
+                
+                # Break to avoid limit
+                log(f"⏳ TAKING BREAK {cfg['break_sec']} SECONDS...")
                 time.sleep(cfg["break_sec"])
-                sent_in_cycle = 0
+                sent_in_cycle = 0   # Reset cycle
 
+            # Normal delay between messages
             time.sleep(cfg["delay"] + random.uniform(-2, 3))
+
         except Exception as e:
-            log(f"SEND FAILED → {str(e)[:60]}")
+            log(f"⚠ SEND FAILED → {str(e)[:60]}")
             time.sleep(15)
 
 @app.route("/")
@@ -65,9 +76,9 @@ def start():
     state["running"] = False
     time.sleep(1)
 
-    state = {"running": True, "sent": 0, "logs": ["BOMBING STARTED"], "start_time": time.time()}
+    state = {"running": True, "sent": 0, "logs": ["🚀 BOT STARTED"], "start_time": time.time()}
 
-    cfg["sessionid"] = request.form["sessionid"].strip()
+    cfg["sessionid"] = request.form.get("sessionid", "").strip()
     cfg["thread_id"] = int(request.form["thread_id"])
     cfg["messages"] = [m.strip() for m in request.form["messages"].split("\n") if m.strip()]
     cfg["group_name"] = request.form.get("group_name", "").strip()
@@ -82,7 +93,7 @@ def start():
 @app.route("/stop")
 def stop():
     state["running"] = False
-    log("STOPPED BY USER")
+    log("⛔ STOPPED BY USER")
     return jsonify({"ok": True})
 
 @app.route("/status")
